@@ -952,6 +952,17 @@ while ($row = $result->fetch_assoc()) {
             font-family: "Font Awesome 5 Free";
             margin-right: 8px;
         }
+        #posts-loader {
+            padding: 20px;
+            text-align: center;
+            color: var(--accent);
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: var(--accent) !important;
+        }
     </style>
 </head>
 <body>
@@ -1117,19 +1128,30 @@ while ($row = $result->fetch_assoc()) {
                                         $orig_stmt->execute();
                                         $orig_result = $orig_stmt->get_result();
                                         $original = $orig_result->fetch_assoc();
+                                        
+                                        // Fetch the sharer's (current post owner) details
+                                        $sharer_stmt = $conn->prepare("SELECT username, full_name, profile_pic FROM users WHERE user_id = ?");
+                                        $sharer_stmt->bind_param("i", $post['user_id']);
+                                        $sharer_stmt->execute();
+                                        $sharer_result = $sharer_stmt->get_result();
+                                        $sharer = $sharer_result->fetch_assoc();
                                         ?>
                                         <div class="post-header d-flex align-items-center">
-                                            <a href="profile.php?username=<?php echo htmlspecialchars($original['username']); ?>" class="text-decoration-none">
-                                                <img src="assets/images/<?php echo $original['profile_pic']; ?>" alt="Sharer" class="post-avatar">
+                                            <!-- Show sharer's profile picture and details -->
+                                            <a href="profile.php?username=<?php echo htmlspecialchars($sharer['username']); ?>" class="text-decoration-none">
+                                                <img src="assets/images/<?php echo $sharer['profile_pic']; ?>" alt="Sharer" class="post-avatar">
                                             </a>
                                             <div class="post-user flex-grow-1">
                                                 <h6 class="post-username">
-                                                    <a href="profile.php?username=<?php echo htmlspecialchars($original['username']); ?>" class="text-decoration-none text-white">
-                                                        <?php echo $original['full_name']; ?>
-                                                    </a> <span style='font-weight:400;color:#F187EA;'>shared</span> <?php echo $original ? $original['full_name'] : '[Deleted]'; ?>'s post</h6>
+                                                    <a href="profile.php?username=<?php echo htmlspecialchars($sharer['username']); ?>" class="text-decoration-none text-white">
+                                                        <?php echo $sharer['full_name']; ?>
+                                                    </a> 
+                                                    <span style='font-weight:400;color:#F187EA;'>shared</span> 
+                                                    <?php echo $original ? $original['full_name'] : '[Deleted]'; ?>'s post
+                                                </h6>
                                                 <p class="post-time">
-                                                    <a href="profile.php?username=<?php echo htmlspecialchars($original['username']); ?>" class="text-decoration-none text-secondary">
-                                                        @<?php echo $original['username']; ?>
+                                                    <a href="profile.php?username=<?php echo htmlspecialchars($sharer['username']); ?>" class="text-decoration-none text-white">
+                                                        @<?php echo $sharer['username']; ?>
                                                     </a> · 
                                                     <?php echo format_date($post['created_at']); ?>
                                                     <span class="privacy-indicator" title="<?php echo ucfirst($post['visibility']); ?>">

@@ -5,45 +5,51 @@
             <h5 class="brand-text">ZYNTRA</h5>
         </a>
 
+        
         <!-- Centered icons for mobile -->
-        <div class="d-lg-none d-flex justify-content-center w-100">
-            <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>" href="index.php">
-                <i class="fas fa-home"></i>
-            </a>
-            <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'friends.php' ? 'active' : ''; ?>" href="friends.php">
-                <i class="fas fa-users"></i>
-            </a>
-            <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'messages.php' ? 'active' : ''; ?>" href="messages.php">
-                <i class="fas fa-envelope"></i>
-                <?php
-                $unread_messages = get_unread_messages_count($_SESSION['user_id']);
-                if ($unread_messages > 0):
-                ?>
-                <span class="badge bg-danger rounded-pill" id="navbarMessageBadge"><?php echo $unread_messages; ?></span>
-                <?php endif; ?>
-            </a>
-            <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'notifications.php' ? 'active' : ''; ?>" href="notifications.php">
-                <i class="fas fa-bell"></i>
-                <?php
-                $unread_count = get_unread_notifications_count($_SESSION['user_id']);
-                if ($unread_count > 0):
-                ?>
-                <span class="badge bg-danger rounded-pill" id="navbarNotificationBadge"><?php echo $unread_count; ?></span>
-                <?php endif; ?>
-            </a>
-            <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'search_page.php' ? 'active' : ''; ?>" href="search_page.php">
-                <i class="fas fa-search"></i>
-            </a>
-            <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'profile.php' ? 'active' : ''; ?>" href="profile.php">
-                <i class="fas fa-user"></i>
-            </a>
-            <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'settings.php' ? 'active' : ''; ?>" href="settings.php">
-                <i class="fas fa-cog"></i>
-            </a>
-            <a class="nav-link" href="logout.php">
-                <i class="fas fa-sign-out-alt"></i>
-            </a>
-        </div>
+<div class="d-lg-none d-flex justify-content-center w-100">
+    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'active' : ''; ?>" href="index.php">
+        <i class="fas fa-home"></i>
+    </a>
+    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'friends.php' ? 'active' : ''; ?>" href="friends.php">
+        <i class="fas fa-users"></i>
+    </a>
+    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'messages.php' ? 'active' : ''; ?>" href="messages.php">
+        <i class="fas fa-envelope"></i>
+        <?php
+        $unread_messages = get_unread_messages_count($_SESSION['user_id']);
+        if ($unread_messages > 0):
+        ?>
+        <span class="badge bg-danger rounded-pill" id="navbarMessageBadge"><?php echo $unread_messages; ?></span>
+        <?php endif; ?>
+    </a>
+    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'notifications.php' ? 'active' : ''; ?>" href="notifications.php">
+        <i class="fas fa-bell"></i>
+        <?php
+        $unread_count = get_unread_notifications_count($_SESSION['user_id']);
+        if ($unread_count > 0):
+        ?>
+        <span class="badge bg-danger rounded-pill" id="navbarNotificationBadge"><?php echo $unread_count; ?></span>
+        <?php endif; ?>
+    </a>
+    <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'search_page.php' ? 'active' : ''; ?>" href="search_page.php">
+        <i class="fas fa-search"></i>
+    </a>
+    
+    <!-- Profile Dropdown -->
+    <div class="profile-container dropdown">
+        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" id="mobileUser Dropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-user"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="mobileUser Dropdown">
+            <li><a class="dropdown-item" href="profile.php"><i class="fas fa-user me-2"></i> My Profile</a></li>
+            <li><a class="dropdown-item" href="settings.php"><i class="fas fa-cog me-2"></i> Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="logout.php"><i class="fas fa-sign-out-alt me-2"></i> Log Out</a></li>
+        </ul>
+    </div>
+</div>
+
 
         <!-- Desktop navbar -->
         <div class="collapse navbar-collapse d-none d-lg-flex" id="navbarNav">
@@ -311,6 +317,12 @@
 
 .notification-dropdown .dropdown-divider {
     border-color: #3C3273;
+}
+@media (max-width: 992px) {
+    .dropdown-menu {
+        top: -10px; /* Adjust this value as needed to position the dropdown */
+        transform: translateY(-100%); /* Ensure it opens upwards */
+    }
 }
 </style>
 

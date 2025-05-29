@@ -47,13 +47,26 @@ if ($is_blocked || $has_blocked) {
     exit;
 }
 
-// Get user's posts
+
+// Get user's posts (both created and shared)
 $stmt = $conn->prepare("
-    SELECT p.*, 
+    SELECT 
+        p.*,
         (SELECT COUNT(*) FROM likes WHERE post_id = p.post_id) as like_count,
         (SELECT COUNT(*) FROM comments WHERE post_id = p.post_id) as comment_count,
-        (SELECT COUNT(*) FROM posts WHERE shared_post_id = p.post_id) as share_count
+        (SELECT COUNT(*) FROM posts WHERE shared_post_id = p.post_id) as share_count,
+        CASE WHEN p.shared_post_id IS NOT NULL THEN 'shared' ELSE 'original' END as post_type,
+        sp.user_id as original_user_id,
+        sp.content as original_content,
+        sp.image as original_image,
+        sp.created_at as original_created_at,
+        sp.visibility as original_visibility,
+        u.username as original_username,
+        u.full_name as original_full_name,
+        u.profile_pic as original_profile_pic
     FROM posts p
+    LEFT JOIN posts sp ON p.shared_post_id = sp.post_id
+    LEFT JOIN users u ON sp.user_id = u.user_id
     WHERE p.user_id = ?
     ORDER BY p.created_at DESC
 ");
@@ -184,6 +197,7 @@ if (isset($_SESSION['post_success'])) {
 <head>
     <meta charset="UTF-8">
     <title><?php echo htmlspecialchars($user['full_name']); ?> - Zyntra</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
@@ -599,48 +613,103 @@ if (isset($_SESSION['post_success'])) {
                         <?php foreach ($posts as $post): ?>
                             <div class="card post">
                                 <div class="card-body">
-                                    <div class="post-header d-flex align-items-center">
-                                        <a href="profile.php?username=<?php echo htmlspecialchars($user['username']); ?>" class="text-decoration-none">
-                                            <img src="assets/images/<?php echo htmlspecialchars($user['profile_pic']); ?>" class="post-avatar" alt="Profile Picture">
-                                        </a>
-                                        <div class="post-user flex-grow-1">
-                                            <h6 class="post-username">
-                                                <a href="profile.php?username=<?php echo htmlspecialchars($user['username']); ?>" class="text-decoration-none text-white">
-                                                    <?php echo htmlspecialchars($user['full_name']); ?>
-                                                </a>
-                                            </h6>
-                                            <p class="post-time">
-                                                <a href="profile.php?username=<?php echo htmlspecialchars($user['username']); ?>" class="text-decoration-none text-white" >
-                                                    @<?php echo htmlspecialchars($user['username']); ?>
-                                                </a> · <?php echo format_date($post['created_at']); ?>
-                                                <span class="privacy-indicator" title="<?php echo ucfirst($post['visibility']); ?>">
-                                                    <?php if ($post['visibility'] === 'public'): ?>
-                                                        <i class="fas fa-globe"></i>
-                                                    <?php elseif ($post['visibility'] === 'friends'): ?>
-                                                        <i class="fas fa-user-friends"></i>
-                                                    <?php else: ?>
-                                                        <i class="fas fa-user-lock"></i>
-                                                    <?php endif; ?>
-                                                </span>
-                                            </p>
-                                        </div>
-                                        <?php if ($is_own_profile): ?>
-                                            <div class="post-menu ms-auto">
-                                                <button class="menu-trigger" type="button" tabindex="0"><i class="fas fa-ellipsis-h" style="color: var(--color-6);"></i></button>
-                                                <div class="dropdown-menu">
-                                                    <button class="dropdown-item edit-post-btn" data-post-id="<?php echo $post['post_id']; ?>">Edit Post</button>
-                                                    <button class="dropdown-item delete-post-btn" data-post-id="<?php echo $post['post_id']; ?>">Delete Post</button>
-                                                </div>
+                                    <?php if (!empty($post['shared_post_id'])): // This is a shared post ?>
+                                        <div class="post-header d-flex align-items-center">
+                                            <a href="profile.php?username=<?php echo htmlspecialchars($user['username']); ?>" class="text-decoration-none">
+                                                <img src="assets/images/<?php echo htmlspecialchars($user['profile_pic']); ?>" class="post-avatar" alt="Profile Picture">
+                                            </a>
+                                            <div class="post-user flex-grow-1">
+                                                <h6 class="post-username">
+                                                    <a href="profile.php?username=<?php echo htmlspecialchars($user['username']); ?>" class="text-decoration-none text-white">
+                                                        <?php echo htmlspecialchars($user['full_name']); ?>
+                                                    </a> 
+                                                    <span style='font-weight:400;color:#F187EA;'>shared</span> 
+                                                    <?php echo $post['original_full_name'] ? htmlspecialchars($post['original_full_name']) : '[Deleted]'; ?>'s post
+                                                </h6>
+                                                <p class="post-time">
+                                                    <a href="profile.php?username=<?php echo htmlspecialchars($user['username']); ?>" class="text-decoration-none text-white">
+                                                        @<?php echo htmlspecialchars($user['username']); ?>
+                                                    </a> · 
+                                                    <?php echo format_date($post['created_at']); ?>
+                                                    <span class="privacy-indicator" title="<?php echo ucfirst($post['visibility']); ?>">
+                                                        <?php if ($post['visibility'] === 'public'): ?>
+                                                            <i class="fas fa-globe"></i>
+                                                        <?php elseif ($post['visibility'] === 'friends'): ?>
+                                                            <i class="fas fa-user-friends"></i>
+                                                        <?php else: ?>
+                                                            <i class="fas fa-user-lock"></i>
+                                                        <?php endif; ?>
+                                                    </span>
+                                                </p>
                                             </div>
-                                        <?php endif; ?>
-                                    </div>
-                                    
-                                    <div class="post-content">
-                                        <p><?php echo nl2br(html_entity_decode(htmlspecialchars($post['content']))); ?></p>
-                                        <?php if ($post['image']): ?>
-                                            <img src="assets/images/<?php echo $post['image']; ?>" alt="Post image" class="post-image">
-                                        <?php endif; ?>
-                                    </div>
+                                            <?php if ($is_own_profile): ?>
+                                                <div class="post-menu ms-auto">
+                                                    <button class="menu-trigger" type="button" tabindex="0"><i class="fas fa-ellipsis-h" style="color: var(--color-6);"></i></button>
+                                                    <div class="dropdown-menu">
+                                                        <button class="dropdown-item delete-post-btn" data-post-id="<?php echo $post['post_id']; ?>">Delete Post</button>
+                                                    </div>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        
+                                        <div class="post-content" style="background:rgba(255,255,255,0.05);border-radius:10px;padding:10px;">
+                                            <?php if ($post['original_full_name']): ?>
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <img src="assets/images/<?php echo htmlspecialchars($post['original_profile_pic']); ?>" alt="Original User" class="post-avatar" style="width:32px;height:32px;margin-right:8px;">
+                                                    <strong class="text-white"><?php echo htmlspecialchars($post['original_full_name']); ?></strong> <span style="color:#F187EA;">@<?php echo htmlspecialchars($post['original_username']); ?></span>
+                                                </div>
+                                                <p><?php echo nl2br(htmlspecialchars($post['original_content'])); ?></p>
+                                                <?php if ($post['original_image']): ?>
+                                                    <img src="assets/images/<?php echo $post['original_image']; ?>" alt="Post image" class="post-image">
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <p class="text-white">[Original post deleted]</p>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php else: // This is an original post ?>
+                                        <div class="post-header d-flex align-items-center">
+                                            <a href="profile.php?username=<?php echo htmlspecialchars($user['username']); ?>" class="text-decoration-none">
+                                                <img src="assets/images/<?php echo htmlspecialchars($user['profile_pic']); ?>" class="post-avatar" alt="Profile Picture">
+                                            </a>
+                                            <div class="post-user flex-grow-1">
+                                                <h6 class="post-username">
+                                                    <a href="profile.php?username=<?php echo htmlspecialchars($user['username']); ?>" class="text-decoration-none text-white">
+                                                        <?php echo htmlspecialchars($user['full_name']); ?>
+                                                    </a>
+                                                </h6>
+                                                <p class="post-time">
+                                                    <a href="profile.php?username=<?php echo htmlspecialchars($user['username']); ?>" class="text-decoration-none text-white">
+                                                        @<?php echo htmlspecialchars($user['username']); ?>
+                                                    </a> · <?php echo format_date($post['created_at']); ?>
+                                                    <span class="privacy-indicator" title="<?php echo ucfirst($post['visibility']); ?>">
+                                                        <?php if ($post['visibility'] === 'public'): ?>
+                                                            <i class="fas fa-globe"></i>
+                                                        <?php elseif ($post['visibility'] === 'friends'): ?>
+                                                            <i class="fas fa-user-friends"></i>
+                                                        <?php else: ?>
+                                                            <i class="fas fa-user-lock"></i>
+                                                        <?php endif; ?>
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <?php if ($is_own_profile): ?>
+                                                <div class="post-menu ms-auto">
+                                                    <button class="menu-trigger" type="button" tabindex="0"><i class="fas fa-ellipsis-h" style="color: var(--color-6);"></i></button>
+                                                    <div class="dropdown-menu">
+                                                        <button class="dropdown-item edit-post-btn" data-post-id="<?php echo $post['post_id']; ?>">Edit Post</button>
+                                                        <button class="dropdown-item delete-post-btn" data-post-id="<?php echo $post['post_id']; ?>">Delete Post</button>
+                                                    </div>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+                                        
+                                        <div class="post-content">
+                                            <p><?php echo nl2br(htmlspecialchars($post['content'])); ?></p>
+                                            <?php if ($post['image']): ?>
+                                                <img src="assets/images/<?php echo $post['image']; ?>" alt="Post image" class="post-image">
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
                                     
                                     <div class="post-footer">
                                         <button class="post-action <?php echo has_user_liked_post($_SESSION['user_id'], $post['post_id']) ? 'text-primary' : ''; ?> like-btn" data-post-id="<?php echo $post['post_id']; ?>">
