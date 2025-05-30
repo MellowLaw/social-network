@@ -1108,6 +1108,7 @@ while ($row = $result->fetch_assoc()) {
                     </div>
                     
                     <!-- Posts Feed -->
+                    <div id="posts-feed">
                     <?php if (empty($posts)): ?>
                         <div class="card">
                             <div class="card-body text-center py-5" style="background-color: var(--card-bg);">
@@ -1274,6 +1275,10 @@ while ($row = $result->fetch_assoc()) {
                             </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
+                    </div>
+                    <div id="posts-loader" style="display:none;">
+                        <div class="spinner-border" role="status"></div>
+                    </div>
                 </div>
                 
                 <!-- Right Column - Friend Suggestions -->
@@ -1681,6 +1686,113 @@ while ($row = $result->fetch_assoc()) {
                 }
             });
         });
+
+        // Infinite Scroll for Posts
+        (function() {
+            const postsFeed = document.getElementById('posts-feed');
+            const loader = document.getElementById('posts-loader');
+            let offset = <?php echo count($posts); ?>;
+            const limit = 10;
+            let loading = false;
+            let noMorePosts = false;
+
+            function initPostFeatures(container) {
+                // Like buttons
+                container.querySelectorAll('.like-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        const postId = this.dataset.postId;
+                        const likeCount = this.querySelector('.like-count');
+                        const icon = this.querySelector('i');
+                        fetch('like_post.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: `post_id=${postId}`
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if(data.success) {
+                                likeCount.textContent = data.like_count;
+                                if(data.action === 'like') {
+                                    icon.classList.remove('far');
+                                    icon.classList.add('fas');
+                                    this.classList.add('text-primary');
+                                } else {
+                                    icon.classList.remove('fas');
+                                    icon.classList.add('far');
+                                    this.classList.remove('text-primary');
+                                }
+                            }
+                        });
+                    });
+                });
+                // Comment forms
+                container.querySelectorAll('.comment-form').forEach(form => {
+                    form.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        // Existing comment submit logic (already in main.js)
+                        // This will work if main.js is loaded
+                    });
+                });
+                // Share buttons
+                container.querySelectorAll('.share-btn').forEach(button => {
+                    button.addEventListener('click', function() {
+                        // Existing share logic (already in main.js)
+                    });
+                });
+                // Post menu
+                container.querySelectorAll('.post-menu .menu-trigger').forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        document.querySelectorAll('.post-menu').forEach(function(menu) { menu.classList.remove('open'); });
+                        this.closest('.post-menu').classList.toggle('open');
+                    });
+                });
+                document.addEventListener('click', function() {
+                    document.querySelectorAll('.post-menu').forEach(function(menu) { menu.classList.remove('open'); });
+                });
+            }
+
+            function loadMorePosts() {
+                if (loading || noMorePosts) return;
+                loading = true;
+                loader.style.display = 'block';
+                fetch(`ajax/load_more_posts.php?offset=${offset}&limit=${limit}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        if (html.trim() === '') {
+                            noMorePosts = true;
+                        } else {
+                            const temp = document.createElement('div');
+                            temp.innerHTML = html;
+                            Array.from(temp.children).forEach(child => {
+                                postsFeed.appendChild(child);
+                                initPostFeatures(child);
+                            });
+                            offset += limit;
+                        }
+                        loader.style.display = 'none';
+                        loading = false;
+                    })
+                    .catch(() => {
+                        loader.style.display = 'none';
+                        loading = false;
+                    });
+            }
+
+            // Initial event listeners for existing posts
+            document.addEventListener('DOMContentLoaded', function() {
+                initPostFeatures(postsFeed);
+            });
+
+            // Infinite scroll event
+            window.addEventListener('scroll', function() {
+                if (noMorePosts || loading) return;
+                const rect = postsFeed.getBoundingClientRect();
+                if (rect.bottom < window.innerHeight + 300) {
+                    loadMorePosts();
+                }
+            });
+        })();
     </script>
 </body>
 </html>
